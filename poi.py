@@ -41,9 +41,9 @@ def db_connect(poiid, title, address, lat, lon, category, checkin_user_num, city
         conn.close()
 
 
-def weibo_api(client, deflat, deflong):
+def weibo_api(client, deflat, deflong, pages):
 
-    r = client.place.nearby.pois.get(lat=deflat, long=deflong, range=10000)
+    r = client.place.nearby.pois.get(lat=deflat, long=deflong, range=10000, count=50, page=pages)
     return r
 
 if __name__ == '__main__':
@@ -62,26 +62,33 @@ if __name__ == '__main__':
             LAT = float('%0.5f' % LAT)
             LONG = float('%0.5f' % LONG)
             try:  # consider the situation of weibo api times limits
-                Json_content = weibo_api(client=CLIENT, deflat=LAT, deflong=LONG)
-                print str(LAT)+'\t'+str(LONG)+'\n'
-                try:  # keep the programm going on when Json_comtent is empty, keep the code not crushing
-                    for poi in Json_content['pois']:
-                        _poiid = poi['poiid']
-                        _title = poi['title']
-                        _address = poi['address']
-                        _lat = poi['lat']
-                        _lon = poi['lon']
-                        _category = poi['category_name']
-                        _checkin_user_num = poi['checkin_user_num']
-                        _city = poi['city']
-                        db_connect(poiid=_poiid, title=_title, address=_address, lat=_lat, lon=_lon, category=_category,  checkin_user_num=_checkin_user_num, city=_city)
+                for _page in range(1,1000):
+                    if not _page == 1: 
+                        Json_content = weibo_api(client=CLIENT, deflat=LAT, deflong=LONG,pages=_page)
+                        max_page = Json_conenten['total_number']
+                    elif _page >= max_page:
+                        Json_content = weibo_api(client=CLIENT, deflat=LAT, deflong=LONG,pages=_page)
+                    else:
+                        break
+                    print str(LAT)+'\t'+str(LONG)+'\n'
+                    try:  # keep the programm going on when Json_comtent is empty, keep the code not crushing
+                        for poi in Json_content['pois']:
+                            _poiid = poi['poiid']
+                            _title = poi['title']
+                            _address = poi['address']
+                            _lat = poi['lat']
+                            _lon = poi['lon']
+                            _category = poi['category_name']
+                            _checkin_user_num = poi['checkin_user_num']
+                            _city = poi['city']
+                            db_connect(poiid=_poiid, title=_title, address=_address, lat=_lat, lon=_lon, category=_category,  checkin_user_num=_checkin_user_num, city=_city)
+                    except:
+                        pass
                 except:
-                    pass
-            except:
-                webbrowser.open_new(URL)
-                code = raw_input('pls input \n')
-                CLIENT = APIClient(app_key=APP_KEY, app_secret=APP_SECRET, redirect_uri=CALLBACK_URL)
-                R = CLIENT.request_access_token(code)
-                access_token = R.access_token
-                expires_in = R.expires_in
-                CLIENT.set_access_token(access_token, expires_in)
+                    webbrowser.open_new(URL)
+                    code = raw_input('pls input \n')
+                    CLIENT = APIClient(app_key=APP_KEY, app_secret=APP_SECRET, redirect_uri=CALLBACK_URL)
+                    R = CLIENT.request_access_token(code)
+                    access_token = R.access_token
+                    expires_in = R.expires_in
+                    CLIENT.set_access_token(access_token, expires_in)
